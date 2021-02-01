@@ -83,7 +83,8 @@ struct SL_GATE : Service::GarageDoorOpener {         // First we create a derive
     attachInterruptArg(this->OpSensorPin.PIN, isr, &(this->OpSensorPin), CHANGE);        
     //poll current state
     PollCurrentState();
-    LOG1("Constructing Gate successful!\n");  
+    LOG1("Constructing Gate successful!\n");
+    //LOG1(WiFi.localIP());  
   } // end constructor
 
   void PollCurrentState(){
@@ -159,24 +160,5 @@ struct SL_GATE : Service::GarageDoorOpener {         // First we create a derive
         CycleTimeBegin = millis();
         PollCurrentState();
       }
-    /*if(CurrentDoorState->getVal()==TargetDoorState->getVal())        // if current-state matches target-state there is nothing do -- exit loop()
-      return;
-
-    if(CurrentDoorState->getVal()==CURRENT_DOOR_STATE_CLOSING && random(100000)==0){    
-                                                               // here we simulate a random obstruction, but only if the door is closing (not opening)
-      CurrentDoorState->setVal(CURRENT_DOOR_STATE_STOPPED);    // if our simulated obstruction is triggered, set the curent-state to 4, which means "stopped"
-      ObstructionDetected->setVal(true);                      // and set obstruction-detected to true
-      LOG1("Garage Door Obstruction Detected!\n");
-    }
-
-    if(CurrentDoorState->getVal()==CURRENT_DOOR_STATE_STOPPED)// if the current-state is stopped, there is nothing more to do - exit loop()     
-      return;
-
-    // This last bit of code only gets called if the door is in a state that represents actively opening or actively closing.
-    // If there is an obstruction, the door is "stopped" and won't start again until the HomeKit Controller requests a new open or close action
-
-    if(TargetDoorState->timeVal()>5000)                     // simulate a garage door that takes 5 seconds to operate by monitoring time since target-state was last modified
-      CurrentDoorState->setVal(TargetDoorState->getVal());           // set the current-state to the target-state */
-
   } // loop 
 };

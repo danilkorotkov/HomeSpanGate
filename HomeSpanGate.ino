@@ -13,7 +13,7 @@
 void setup() {
   Serial.begin(115200);
 
-  homeSpan.begin(Category::GarageDoorOpeners,"Danil Gate");
+  homeSpan.begin(Category::GarageDoorOpeners,"Sl Gate");
   homeSpan.setApSSID("Sl-Gate-AP");
   
   new SpanAccessory(); 

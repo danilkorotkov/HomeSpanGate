@@ -48,7 +48,8 @@ struct SL_GATE : Service::GarageDoorOpener {         // First we create a derive
   int StopPin     = 21;
   struct Sensor OpSensorPin = {22, false};
   struct Sensor ClSensorPin = {23, false};
-
+  struct Sensor ObSensorPin = {17, false};
+  
   uint32_t CycleTimeout = 60000; //60s
   volatile uint32_t CycleTimeBegin;
   
@@ -79,8 +80,10 @@ struct SL_GATE : Service::GarageDoorOpener {         // First we create a derive
     
     pinMode(this->ClSensorPin.PIN, INPUT_PULLUP);
     pinMode(this->OpSensorPin.PIN, INPUT_PULLUP);
+    pinMode(this->ObSensorPin.PIN, INPUT_PULLUP);
     attachInterruptArg(this->ClSensorPin.PIN, isr, &(this->ClSensorPin), CHANGE);
-    attachInterruptArg(this->OpSensorPin.PIN, isr, &(this->OpSensorPin), CHANGE);        
+    attachInterruptArg(this->OpSensorPin.PIN, isr, &(this->OpSensorPin), CHANGE);
+    attachInterruptArg(this->ObSensorPin.PIN, isr, &(this->ObSensorPin), CHANGE);         
     //poll current state
     PollCurrentState();
     LOG1("Constructing Gate successful!\n");
@@ -91,6 +94,7 @@ struct SL_GATE : Service::GarageDoorOpener {         // First we create a derive
     if (digitalRead(ClSensorPin.PIN) == SENSOR_CLOSED)        {CurrentDoorState->setVal(CURRENT_DOOR_STATE_CLOSED); TargetDoorState->setVal(TARGET_DOOR_STATE_CLOSED);}
     else if (digitalRead(OpSensorPin.PIN) == SENSOR_CLOSED)   {CurrentDoorState->setVal(CURRENT_DOOR_STATE_OPEN);   TargetDoorState->setVal(TARGET_DOOR_STATE_OPEN);}
     else                                                      {CurrentDoorState->setVal(CURRENT_DOOR_STATE_OPEN);   TargetDoorState->setVal(TARGET_DOOR_STATE_OPEN);}
+    if (digitalRead(ObSensorPin.PIN) == SENSOR_CLOSED)        {ObstructionDetected->setVal(true);}
   }
 
   // Finally, we over-ride the default update() method Note update() returns type boolean
@@ -102,7 +106,7 @@ struct SL_GATE : Service::GarageDoorOpener {         // First we create a derive
                                                               //HomeKit is requesting the door to be in open position
         LOG1("-----------Opening Gate----------\n");
         CurrentDoorState->setVal(CURRENT_DOOR_STATE_OPENING);   // set the current-state value to 2, which means "opening"
-        ObstructionDetected->setVal(false);                     // clear any prior obstruction detection
+        //ObstructionDetected->setVal(false);                     // clear any prior obstruction detection
       
         digitalWrite(ClosePin,LOW);
         digitalWrite(OpenPin,HIGH);    
@@ -114,7 +118,7 @@ struct SL_GATE : Service::GarageDoorOpener {         // First we create a derive
       
         LOG1("----------Closing Gate----------\n");                                 // else the target-state value is set to 1, and HomeKit is requesting the door to be in the closed position
         CurrentDoorState->setVal(CURRENT_DOOR_STATE_CLOSING);   // set the current-state value to 3, which means "closing"         
-        ObstructionDetected->setVal(false);                     // clear any prior obstruction detection
+        //ObstructionDetected->setVal(false);                     // clear any prior obstruction detection
       
         digitalWrite(OpenPin,LOW);
         digitalWrite(ClosePin,HIGH);
@@ -155,6 +159,12 @@ struct SL_GATE : Service::GarageDoorOpener {         // First we create a derive
         if (digitalRead(OpSensorPin.PIN) == SENSOR_RELEASED) {CurrentDoorState->setVal(CURRENT_DOOR_STATE_CLOSING);TargetDoorState->setVal(TARGET_DOOR_STATE_CLOSED);}     
       }
 
+      if (ObSensorPin.changed) {
+        ObSensorPin.changed = false;
+        if (digitalRead(ObSensorPin.PIN) == SENSOR_CLOSED)        {ObstructionDetected->setVal(true);}
+        else                                                      {ObstructionDetected->setVal(false);}
+      }
+      
       if ( (millis() - CycleTimeBegin) > CycleTimeout ) { 
         LOG1("----------CycleTimeBegin.updated----------\n");
         CycleTimeBegin = millis();

@@ -61,13 +61,15 @@ struct SL_GATE : Service::GarageDoorOpener {         // First we create a derive
   SpanCharacteristic *ObstructionDetected;
   SpanCharacteristic *Name;
   
+   
   SL_GATE() : Service::GarageDoorOpener(){
 
     LOG1("Constructing Gate…\n");
-    CurrentDoorState=new Characteristic::CurrentDoorState();// this is where we create the On Characterstic we had previously defined in setup().  Save this in the pointer created above, for use below
-    TargetDoorState=new Characteristic::TargetDoorState();
+    CurrentDoorState  = new Characteristic::CurrentDoorState();// this is where we create the Characterstic we had previously defined in setup().  Save this in the pointer created above, for use below
+    TargetDoorState =   new Characteristic::TargetDoorState();
     ObstructionDetected=new Characteristic::ObstructionDetected();
     Name=new Characteristic::Name("Gate");
+    
                          
     pinMode(this->OpenPin,OUTPUT); 
     digitalWrite(this->OpenPin,LOW);
@@ -109,6 +111,7 @@ struct SL_GATE : Service::GarageDoorOpener {         // First we create a derive
     if (digitalRead(ObSensorPin.PIN)      == SENSOR_CLOSED && !ObstructionDetected->getVal())        
                                                               {ObstructionDetected->setVal(true);
                                                                ObSensorPin.stableState = SENSOR_CLOSED;}
+    
   }
 
   // Finally, we over-ride the default update() method Note update() returns type boolean

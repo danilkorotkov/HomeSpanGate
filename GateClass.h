@@ -12,6 +12,9 @@
 #define SENSOR_CLOSED   0
 #define SENSOR_RELEASED 1
 
+#include "Door.h"
+#include "Lock.h"
+
 ////////////////////////////
 volatile int ButtonArray[3];
 volatile bool isTimered = false;
@@ -60,6 +63,8 @@ struct SL_GATE : Service::GarageDoorOpener {         // First we create a derive
   SpanCharacteristic *TargetDoorState;
   SpanCharacteristic *ObstructionDetected;
   SpanCharacteristic *Name;
+  SpanService *GatePosition;
+  SpanService *Lock;
   
    
   SL_GATE() : Service::GarageDoorOpener(){
@@ -91,6 +96,8 @@ struct SL_GATE : Service::GarageDoorOpener {         // First we create a derive
     attachInterruptArg(this->ObSensorPin.PIN, isr, &(this->ObSensorPin), CHANGE);         
     //poll current state
     PollCurrentState();
+    GatePosition = new GateDoor();
+    Lock = new DoorLock();
     LOG1("Constructing Gate successful!\n");
     //LOG1(WiFi.localIP());  
   } // end constructor

@@ -13,13 +13,17 @@
 void setup() {
   Serial.begin(115200);
 
-  homeSpan.begin(Category::GarageDoorOpeners,"Sl Gate");
+  
   homeSpan.setApSSID("Sl-Gate-AP");
   homeSpan.setApPassword("");
   homeSpan.setControlPin(0);
   homeSpan.setStatusPin(2);
   homeSpan.setLogLevel(1);
-  homeSpan.setHostNameSuffix("v0.2");
+
+  homeSpan.setSketchVersion("2.0.1");
+  homeSpan.enableOTA();
+  
+  homeSpan.begin(Category::GarageDoorOpeners,"Sl Gate");
   
   new SpanAccessory(); 
   
@@ -28,14 +32,13 @@ void setup() {
       new Characteristic::Manufacturer("Danil"); 
       new Characteristic::SerialNumber("0000001"); 
       new Characteristic::Model("3 key model"); 
-      new Characteristic::FirmwareRevision("0.2"); 
+      new Characteristic::FirmwareRevision("2.0.1"); 
       new Characteristic::Identify();            
       
     new Service::HAPProtocolInformation();      
       new Characteristic::Version("1.1.0"); 
   
     new SL_GATE();
-  
 }
 
 void loop() {

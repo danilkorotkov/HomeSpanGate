@@ -10,6 +10,7 @@ struct GateDoor : Service::Door{
     CurrentPosition = new Characteristic::CurrentPosition(50);
     TargetPosition = new Characteristic::TargetPosition(50);
     PositionState = new Characteristic::PositionState(2);
+    
   }
   void loop(){
     if ( (millis() - CycleTimeBegin) > PollTimeout ) {

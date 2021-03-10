@@ -12,8 +12,11 @@
 #define SENSOR_CLOSED   0
 #define SENSOR_RELEASED 1
 
-#include "Door.h"
+//#include "Door.h"
 #include "Lock.h"
+
+#include <nvs.h>
+#include <nvs_flash.h>
 
 ////////////////////////////
 int ButtonArray[3];
@@ -25,6 +28,14 @@ struct Sensor {
     const uint8_t PIN;
     bool changed;
     int stableState;
+};
+
+struct CustomOpen {
+    uint32_t updateTime = 0;
+    bool fromZeroPos = false;
+    bool Direction = 0; // 0 - opening 1 - closing
+    uint32_t openTime = 0;
+    uint32_t closeTime = 0; 
 };
 
 void IRAM_ATTR isr(void* arg) {
@@ -70,7 +81,7 @@ struct SL_GATE : Service::GarageDoorOpener {         // First we create a derive
   SL_GATE() : Service::GarageDoorOpener(){
 
     LOG1("Constructing Gate…\n");
-    CurrentDoorState  = new Characteristic::CurrentDoorState();// this is where we create the Characterstic we had previously defined in setup().  Save this in the pointer created above, for use below
+    CurrentDoorState  = new Characteristic::CurrentDoorState();
     TargetDoorState =   new Characteristic::TargetDoorState();
     ObstructionDetected=new Characteristic::ObstructionDetected();
     Name=new Characteristic::Name("Gate");
@@ -96,32 +107,91 @@ struct SL_GATE : Service::GarageDoorOpener {         // First we create a derive
     attachInterruptArg(this->ObSensorPin.PIN, isr, &(this->ObSensorPin), CHANGE);         
     //poll current state
     PollCurrentState();
-    //GatePosition = new GateDoor();
+
+    GatePosition = new GateDoor(this);
     Lock = new DoorLock();
+    
     LOG1("Constructing Gate successful!\n");
     //LOG1(WiFi.localIP());  
   } // end constructor
+
+  struct GateDoor : Service::Door{
+    size_t nvslen;             // not used but required to read blobs from NVS
+    static nvs_handle gateNVS;
+    
+    SpanCharacteristic *CurrentPosition;
+    SpanCharacteristic *TargetPosition;
+    SpanCharacteristic *PositionState;
+    SpanCharacteristic *ObstructionDetected;
+    SpanCharacteristic *HoldPosition;
+    SL_GATE *gate;
+   
+    /*  PositionState
+        0 ”Going to the minimum value specified in metadata”
+        1 ”Going to the maximum value specified in metadata”
+        2 ”Stopped”
+        3-255 ”Reserved”*/
+    
+    uint32_t CycleTimeBegin = millis();
+    uint32_t PollTimeout = 10000;
+
+    struct CustomOpen GateDoorState;
+      
+    GateDoor(SL_GATE* gate) : Service::Door(){
+      CurrentPosition      = new Characteristic::CurrentPosition(50);
+      TargetPosition       = new Characteristic::TargetPosition(50);
+      PositionState        = new Characteristic::PositionState(2);
+      ObstructionDetected  = new Characteristic::ObstructionDetected(false);
+      HoldPosition         = new Characteristic::HoldPosition(false);
+      this->gate=gate;
+      NVS_init();
+   
+    }
+
+    void NVS_init(){
+      LOG1("----------Reading storage----------\n");
+      nvs_open("GATE",NVS_READWRITE,&gateNVS);
+      
+     if(!nvs_get_blob(gateNVS,"GATEDATA",NULL,&nvslen)) {                       // if found GATE data in NVS
+        nvs_get_blob(gateNVS,"GATEDATA",&GateDoorState,&nvslen); }              // retrieve data  
+    }
+    
+    void loop(){
+      return;
+      if ( (millis() - CycleTimeBegin) > PollTimeout ) {
+        
+        gate->TargetDoorState-> setVal( gate->CurrentDoorState->getVal() );
+        gate->CurrentDoorState-> setVal( !gate->CurrentDoorState->getVal() );
+        
+        CycleTimeBegin = millis();
+      }
+    } //loop    
+  }; //position
 
   void PollCurrentState(){
     if (digitalRead(ClSensorPin.PIN)      == SENSOR_CLOSED &&  CurrentDoorState-> getVal() !=CURRENT_DOOR_STATE_CLOSED)        
                                                               {CurrentDoorState-> setVal(CURRENT_DOOR_STATE_CLOSED); 
                                                               TargetDoorState->   setVal(TARGET_DOOR_STATE_CLOSED);
-                                                               ClSensorPin.stableState = SENSOR_CLOSED;}
+                                                              ClSensorPin.stableState = SENSOR_CLOSED;
+                                                              }
     
     else if (digitalRead(OpSensorPin.PIN) == SENSOR_CLOSED && CurrentDoorState->  getVal() != CURRENT_DOOR_STATE_OPEN)   
                                                               {CurrentDoorState-> setVal(CURRENT_DOOR_STATE_OPEN);   
                                                               TargetDoorState->   setVal(TARGET_DOOR_STATE_OPEN);
-                                                               OpSensorPin.stableState = SENSOR_CLOSED;}
+                                                              OpSensorPin.stableState = SENSOR_CLOSED;
+                                                              }
     
     else if                                                   (CurrentDoorState-> getVal() != CURRENT_DOOR_STATE_OPEN)   
                                                               {CurrentDoorState-> setVal(CURRENT_DOOR_STATE_OPEN);   
                                                               TargetDoorState->   setVal(TARGET_DOOR_STATE_OPEN);
-                                                               OpSensorPin.stableState = SENSOR_RELEASED; 
-                                                               ClSensorPin.stableState = SENSOR_RELEASED;}
+                                                              OpSensorPin.stableState = SENSOR_RELEASED; 
+                                                              ClSensorPin.stableState = SENSOR_RELEASED;
+                                                              }
     
     if (digitalRead(ObSensorPin.PIN)      == SENSOR_CLOSED && !ObstructionDetected->getVal())        
                                                               {ObstructionDetected->setVal(true);
-                                                               ObSensorPin.stableState = SENSOR_CLOSED;}
+                                                              ObSensorPin.stableState = SENSOR_CLOSED;
+                                                              }
     
   }
 
@@ -199,6 +269,7 @@ struct SL_GATE : Service::GarageDoorOpener {         // First we create a derive
                                                               LOG1("----------ClSensorPin.SENSOR_RELEASED----------\n");  
                                                               ClSensorPin.stableState = SENSOR_RELEASED;
                                                               // если состояние итак открывается, то ничего менять не будем
+                                                              // по сути игнорим открывание через HAP и реагируем на брелок
                                                               if ( CurrentDoorState->getVal() != CURRENT_DOOR_STATE_OPENING ){ 
                                                               CurrentDoorState->setVal(CURRENT_DOOR_STATE_OPENING);
                                                               TargetDoorState->setVal(TARGET_DOOR_STATE_OPEN);}}
@@ -219,6 +290,8 @@ struct SL_GATE : Service::GarageDoorOpener {         // First we create a derive
         if (digitalRead(OpSensorPin.PIN) == SENSOR_RELEASED && OpSensorPin.stableState == SENSOR_CLOSED) {
                                                               LOG1("----------OpSensorPin.SENSOR_RELEASED----------\n");
                                                               OpSensorPin.stableState = SENSOR_RELEASED;
+                                                              // если состояние итак закрывается, то ничего менять не будем
+                                                              // по сути игнорим закрывание через HAP и реагируем на брелок
                                                               if (CurrentDoorState->getVal() != CURRENT_DOOR_STATE_CLOSING){ 
                                                               CurrentDoorState->setVal(CURRENT_DOOR_STATE_CLOSING);
                                                               TargetDoorState->setVal(TARGET_DOOR_STATE_CLOSED);}}     
@@ -233,12 +306,12 @@ struct SL_GATE : Service::GarageDoorOpener {         // First we create a derive
         if (digitalRead(ObSensorPin.PIN) == SENSOR_CLOSED && ObSensorPin.stableState == SENSOR_RELEASED)    
                                                               {LOG1("----------Optocoupler.SENSOR_CLOSED----------\n");
                                                                ObstructionDetected->setVal(true);
-                                                               ObSensorPin.stableState == SENSOR_CLOSED;}
+                                                               ObSensorPin.stableState = SENSOR_CLOSED;}
         
         if (digitalRead(ObSensorPin.PIN) == SENSOR_RELEASED && ObSensorPin.stableState == SENSOR_CLOSED)                                                        
                                                               {LOG1("----------Optocoupler.SENSOR_RELEASED----------\n");
                                                                ObstructionDetected->setVal(false);
-                                                               ObSensorPin.stableState == SENSOR_RELEASED;}
+                                                               ObSensorPin.stableState = SENSOR_RELEASED;}
       
       } else if ( ((millis() - ObPortPollBegin)>PortPollTimeout) && ObSensorPin.stableState == SENSOR_CLOSED && !ObstructionDetected->getVal() )
                                                               {ObstructionDetected->setVal(true);}
@@ -254,3 +327,6 @@ struct SL_GATE : Service::GarageDoorOpener {         // First we create a derive
       }
   } // loop 
 };
+
+////////////////
+nvs_handle SL_GATE::GateDoor::gateNVS;

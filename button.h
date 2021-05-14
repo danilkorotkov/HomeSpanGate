@@ -2,14 +2,14 @@
 #define BUTTON_H
 
 #include "HomeSpan.h" 
-#define SINGLE_PRESS 0
+#define PRESS 1
 
 void IRAM_ATTR onBtnTimer();
 
 struct SwLock;
 
-struct SwLock: Service::StatelessProgrammableSwitch{
-  SpanCharacteristic *ProgrammableSwitchEvent;
+struct SwLock: Service::Switch{
+  SpanCharacteristic *On;
 
   int SwPin = 21;
 

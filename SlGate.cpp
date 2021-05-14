@@ -19,6 +19,8 @@
 #include "button.h" 
 
 ////////////////////////////
+bool StopStatus = false;
+
 bool isTimered = false;
 hw_timer_t * ButtonTimer = NULL;
 portMUX_TYPE DoortimerMux = portMUX_INITIALIZER_UNLOCKED;
@@ -87,7 +89,7 @@ SL_GATE::SL_GATE() : Service::GarageDoorOpener(){
   
   PollCurrentState();
 
-  //new SwLock();
+  new SwLock();
 
   LOG1("Constructing Gate successful!\n");
   //LOG1(WiFi.localIP());  
@@ -244,9 +246,10 @@ void SL_GATE::loop(){
                                                               }
                                                               
       
-      if ( (millis() - CycleTimeBegin) > CycleTimeout ) { 
+      if ( (millis() - CycleTimeBegin) > CycleTimeout || StopStatus) { 
         LOG1("----------CycleTimeBegin.updated----------\n");
         CycleTimeBegin = millis();
+        StopStatus = false;
         PollCurrentState();
       }
 }// loop 

@@ -1,5 +1,7 @@
 #include "button.h" 
 
+extern bool StopStatus;
+
 hw_timer_t * SwTimer = NULL;
 portMUX_TYPE SwTimerMux = portMUX_INITIALIZER_UNLOCKED;
 bool isSwTimered = false;
@@ -17,8 +19,8 @@ void SwLock :: initSwTimer(){
   timerAlarmEnable(SwTimer);  
 };
  
-SwLock :: SwLock() : Service::StatelessProgrammableSwitch(){
-    ProgrammableSwitchEvent  = new Characteristic::ProgrammableSwitchEvent();
+SwLock :: SwLock() : Switch(){
+    On  = new Characteristic::On();
 
     pinMode(SwPin,OUTPUT); 
     digitalWrite(SwPin,LOW);
@@ -26,10 +28,11 @@ SwLock :: SwLock() : Service::StatelessProgrammableSwitch(){
 }
 
 boolean SwLock :: update(){            
-  if(ProgrammableSwitchEvent->getNewVal() == SINGLE_PRESS){ 
+  if(On->getNewVal() == PRESS){ 
     LOG1("-----------SINGLE_PRESS----------\n");   
     
     digitalWrite(SwPin,HIGH);
+    StopStatus = true;
     initSwTimer();
   }
   return(true);                                   // return true to indicate the update was successful (otherwise create code to return false if some reason you could not turn on the LED)
@@ -45,5 +48,6 @@ void SwLock ::loop(){
     portEXIT_CRITICAL(&SwTimerMux);        
     LOG1("----------Stop deinited----------\n");
     digitalWrite(SwPin,LOW);
+    On->setVal(0);
   }
 }

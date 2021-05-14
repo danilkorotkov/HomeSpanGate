@@ -16,6 +16,7 @@
 #define P_SENSOR_RELEASED 1
 
 #include "SlGate.h"
+#include "button.h" 
 
 ////////////////////////////
 bool isTimered = false;
@@ -64,6 +65,9 @@ SL_GATE::SL_GATE() : Service::GarageDoorOpener(){
                                               
   pinMode(ClosePin,OUTPUT);
   digitalWrite(ClosePin,LOW);
+
+  //pinMode(StopPin,OUTPUT);
+  //digitalWrite(ClosePin,LOW);
                       
   pinMode(JmpPin, INPUT_PULLUP);
   SENSOR_CLOSED    ^= digitalRead(JmpPin);
@@ -82,6 +86,8 @@ SL_GATE::SL_GATE() : Service::GarageDoorOpener(){
   OpSensorPin.stableState = digitalRead(OpSensorPin.PIN);
   
   PollCurrentState();
+
+  //new SwLock();
 
   LOG1("Constructing Gate successful!\n");
   //LOG1(WiFi.localIP());  

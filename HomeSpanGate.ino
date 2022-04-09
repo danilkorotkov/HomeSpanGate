@@ -10,6 +10,14 @@
 #include "HomeSpan.h" 
 #include "SlGate.h" 
 #include "Lock.h"
+TaskHandle_t h_HK_poll;
+
+void HK_poll(void * pvParameters){
+
+  for (;;){
+    homeSpan.poll();
+  }   //loop
+}     //task
 
 void setup() {
   Serial.begin(115200);
@@ -33,7 +41,7 @@ void setup() {
       new Characteristic::Manufacturer("Danil"); 
       new Characteristic::SerialNumber("0000001"); 
       new Characteristic::Model("2 key model"); 
-      new Characteristic::FirmwareRevision("2.0.1"); 
+      new Characteristic::FirmwareRevision("2.0.4"); 
       new Characteristic::Identify();            
       
     new Service::HAPProtocolInformation();      
@@ -48,15 +56,26 @@ void setup() {
       new Characteristic::Manufacturer("Danil"); 
       new Characteristic::SerialNumber("0000002"); 
       new Characteristic::Model("3 key model"); 
-      new Characteristic::FirmwareRevision("0.0.3"); 
+      new Characteristic::FirmwareRevision("0.0.5"); 
       new Characteristic::Identify();            
       
     new Service::HAPProtocolInformation();      
       new Characteristic::Version("1.1.0"); 
 
     new DoorLock();
+
+    xTaskCreatePinnedToCore(
+                    HK_poll,    /* Task function. */
+                    "HK_poll",  /* name of task. */
+                    10000,       /* Stack size of task */
+                    NULL,        /* parameter of the task */
+                    1,           /* priority of the task */
+                    &h_HK_poll, /* Task handle to keep track of created task */
+                    0);          /* pin task to core 0 */  
+  
+    delay(1000);
 }
 
 void loop() {
-  homeSpan.poll();
+  //homeSpan.poll();
 }

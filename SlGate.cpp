@@ -18,6 +18,9 @@
 #include "SlGate.h"
 #include "button.h" 
 
+CUSTOM_CHAR_STRING(WiFiLevelSensor,  00000004-0001-0001-0001-46637266EA00, PR+EV, "");
+String level = "DISCONNECTED"; 
+
 ////////////////////////////
 bool StopStatus = false;
 
@@ -61,6 +64,9 @@ SL_GATE::SL_GATE() : Service::GarageDoorOpener(){
   TargetDoorState     = new Characteristic::TargetDoorState(TARGET_DOOR_STATE_OPEN);
   ObstructionDetected = new Characteristic::ObstructionDetected();
   Name=new Characteristic::Name("Gate"); 
+
+  WiFiLevel           = new Characteristic::WiFiLevelSensor();
+  WiFiLevel ->setDescription("WiFi level");
                          
   pinMode(OpenPin,OUTPUT); 
   digitalWrite(OpenPin,LOW);
@@ -123,6 +129,24 @@ void SL_GATE::PollCurrentState(){
                                                               ObSensorPin.stableState = P_SENSOR_CLOSED;
                                                               }
     
+  
+  
+  if (WiFi.status() == WL_CONNECTED) {
+      long rssi = WiFi.RSSI();
+      if (rssi >= -55) {
+        level = "EXCELLENT";
+      }else if (rssi < -55 & rssi > -65) {
+        level = "GOOD";
+      }else if (rssi < -65 & rssi > -75) {
+        level = "LOW";
+      }else if (rssi < -75) {
+        level = "BAD";
+      }
+    }else {
+      level = "DISCONNECTED";
+    }
+  Serial.print("WIFI RSSI:  ");Serial.print(WiFi.RSSI());Serial.println("dB");
+  WiFiLevel->setString(level.c_str());
   LOG1("polling over\n");
 }
 
@@ -193,7 +217,7 @@ void SL_GATE::loop(){
                                                               }
       
       } else if ( ((millis() - PortPollBegin)>PortPollTimeout) && (ClSensorPin.stableState == SENSOR_CLOSED) && (CurrentDoorState->getVal() != CURRENT_DOOR_STATE_CLOSED) ){
-                                                              LOG1("closed by timeout\n");
+                                                              //LOG1("closed by timeout\n");
                                                               FullyClosed();}
       
       if (OpSensorPin.changed && (millis() - PortPollBegin)>PortPollTimeout) {
@@ -218,7 +242,7 @@ void SL_GATE::loop(){
                                                               }     
       
       } else if ( ((millis() - PortPollBegin)>PortPollTimeout) && OpSensorPin.stableState == SENSOR_CLOSED && CurrentDoorState->getVal() != CURRENT_DOOR_STATE_OPEN ){
-                                                              LOG1("opened by timeout\n");
+                                                              //LOG1("opened by timeout\n");
                                                               FullyOpened();}
 
       if (ObSensorPin.changed && (millis() - ObPortPollBegin)>PortPollTimeout) {
@@ -260,6 +284,8 @@ void SL_GATE::FullyOpened(){
 }
 
 void SL_GATE::FullyOpenExtern(){
+  CurrentDoorState->setVal(CURRENT_DOOR_STATE_OPENING);
+  //TargetDoorState->setVal(TARGET_DOOR_STATE_OPEN);
 }
 
 void SL_GATE::FullyCloseExtern(){

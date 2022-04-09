@@ -24,4 +24,4 @@ struct DoorLock: Service::LockMechanism{
   void loop();
   void initDoorTimer();
 };
-#endif /LOCK_H/
+#endif //LOCK_H/

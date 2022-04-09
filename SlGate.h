@@ -41,6 +41,7 @@ struct SL_GATE : Service::GarageDoorOpener {         // First we create a derive
   SpanCharacteristic *TargetDoorState;
   SpanCharacteristic *ObstructionDetected;
   SpanCharacteristic *Name; 
+  SpanCharacteristic *WiFiLevel;
    
   SL_GATE();
   void PollCurrentState();

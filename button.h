@@ -18,4 +18,4 @@ struct SwLock: Service::Switch{
   void loop();
   void initSwTimer();
 };
-#endif /BUTTON_H/
+#endif //BUTTON_H/
